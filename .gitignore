@@ -1,3 +1,4 @@
 artifacts/yolo/weights/
 artifacts/videos/
 datasets/
+.env

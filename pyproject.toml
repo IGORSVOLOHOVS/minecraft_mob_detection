@@ -21,3 +21,7 @@ ignore = ["ANN401", "RUF001"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+# `python -m pytest` puts the working directory on sys.path; a bare
+# `pytest` - which is what CI runs - does not, and the tests then cannot
+# import mobtools. Saying so here makes both invocations behave the same.
+pythonpath = ["."]

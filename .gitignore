@@ -2,3 +2,8 @@ artifacts/yolo/weights/
 artifacts/videos/
 datasets/
 .env
+
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/

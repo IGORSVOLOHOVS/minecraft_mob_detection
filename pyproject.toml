@@ -1,0 +1,23 @@
+# Only the project's own code is configured here. `configs/`, `tools/` and
+# `demo/` are a vendored fork of mmdetection: linting or reformatting them
+# would produce an enormous diff against somebody else's upstream and make the
+# next rebase painful for no gain.
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+include = ["mobtools/**/*.py", "tests/**/*.py", "utils.py"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "N", "UP", "B", "C4", "SIM", "RUF", "ANN"]
+# RUF001 flags Cyrillic letters as "ambiguous" against their Latin
+# lookalikes. The report is written in Russian on purpose, so every string
+# in it would be a finding.
+ignore = ["ANN401", "RUF001"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ANN001"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

@@ -106,4 +106,4 @@ auto_augment: randaugment
 erasing: 0.4
 cfg: null
 tracker: botsort.yaml
-save_dir: C:\Users\igors\Projects\Computer-Vision\mmdetection\runs\detect\artifacts\yolo6
+save_dir: runs/detect/artifacts/yolo6

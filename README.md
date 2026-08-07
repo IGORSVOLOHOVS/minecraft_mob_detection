@@ -54,3 +54,14 @@ pip install mmdet ultralytics jupyterlab pycocotools opencv-python pandas matplo
 ```
 
 4. Разместите скачанный датасет в `datasets/minecraft/` (внутри должны быть папки `train`, `val`, `test` и файл `annotations.json`). Разместите видео для инференса по пути `datasets/minecraft/video.mp4`.
+
+## Licence
+
+The code written for this project - `mobtools/`, `tests/`, `scripts/`,
+`utils.py` and the notebook - is MIT, see `LICENSE`.
+
+`tools/`, `demo/` and `configs/` are vendored from
+[mmdetection](https://github.com/open-mmlab/mmdetection) and remain under the
+Apache License 2.0; the copy required by that licence is in
+`LICENSES/Apache-2.0-OpenMMLab.txt`. `THIRD_PARTY.md` says which path belongs to
+whom.

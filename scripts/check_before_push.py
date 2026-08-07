@@ -51,12 +51,28 @@ PREFIXES = (
     ["python", "-m"],
     ["python3", "-m"],
     ["py", "-m"],
+    # A GUI test suite on a headless Linux runner is wrapped in xvfb-run, which
+    # supplies a display and then runs the command unchanged. Without this the
+    # line reads as an invocation of `xvfb-run`, which is not a tool this script
+    # knows, so the whole step is skipped in silence. It was masked here only
+    # because the matrix also runs the same tests on Windows without the
+    # wrapper; a repository that builds on Linux alone would have been checking
+    # nothing.
+    ["xvfb-run", "-a"],
+    ["xvfb-run"],
 )
 YAML_KEY = re.compile(r"^-?\s*(name|uses|with|env|if|id|shell|working-directory):")
 
-# pytest's "no tests were collected" - a repository with an empty tests/
-# directory is not a failing repository.
-PYTEST_EMPTY = 5
+# pytest exits 5 when it collected no tests at all. This used to be treated as a
+# pass here, on the reasoning that an empty tests/ directory is not a failure.
+# That reasoning is wrong for the one job this script has: the hosted runner
+# gets the same 5, fails the step, and sends the mail. A rename that orphans a
+# test file, or a `-k` filter that matches nothing, therefore passed here and
+# went red there - which is exactly the sequence this script exists to prevent.
+#
+# It is now a failure, with an explanation, because the check has to agree with
+# CI even when CI is being pedantic.
+PYTEST_NO_TESTS = 5
 
 
 def have(module: str) -> bool:
@@ -123,6 +139,11 @@ def localise(command: list[str]) -> list[str] | None:
 INSTALL_STEPS = (
     "pip install -e",
     "pip install .",
+    # A workflow that installs a requirements file is installing the project's
+    # dependencies just as surely as one that installs the package. Leaving this
+    # out made the hook report "CI would fail" on three repositories whose only
+    # problem was a dependency this machine does not have and the runner does.
+    "pip install -r",
     "uv sync",
     "poetry install",
     "setup.py develop",
@@ -144,6 +165,19 @@ def ci_installs_the_package(text: str) -> bool:
     return any(step in text for step in INSTALL_STEPS)
 
 
+def ci_install_command(text: str) -> str | None:
+    """The command CI uses to install this project, so it can be suggested.
+
+    Telling someone a check did not run is only half an answer; the other half
+    is the one line that makes it run. Returns the first install step found in
+    the workflows, or None when the project needs no installing.
+    """
+    for step in INSTALL_STEPS:
+        if step in text:
+            return "uv sync --all-extras" if step == "uv sync" else step
+    return None
+
+
 def not_our_fault(output: str, workflows_text: str) -> str:
     """Why a test run failed for a reason a push cannot fix.
 
@@ -158,6 +192,12 @@ def not_our_fault(output: str, workflows_text: str) -> str:
     # failing test module, which is most of them.
     if "ModuleNotFoundError" in output and "during collection" in output:
         return "the package is not installed here; CI installs it before testing"
+    # A library refusing to work because an optional extra is missing is the
+    # same situation wearing different words: python-telegram-bot raises
+    # RuntimeError rather than ImportError when [rate-limiter] is absent, and
+    # the runner has it because requirements.txt pins it.
+    if "must be installed via" in output and "pip install" in output:
+        return "an optional extra is missing here; CI installs it before testing"
     if "Required test coverage" in output and "Total coverage: 0.00%" in output:
         return "coverage measured nothing because the package is not installed here"
     return ""
@@ -191,9 +231,15 @@ def as_ci_invokes_it(command: list[str]) -> list[str]:
     found = shutil.which(tool)
     if found:
         return [found, *command[1:]]
-    if sys.version_info >= (3, 11):
-        return [sys.executable, "-P", "-m", *command]
-    return [sys.executable, "-m", *command]
+    # `-P` is what makes this fallback as strict as the console script, and it
+    # arrived in 3.11. Asked as a capability rather than as a version number on
+    # purpose: this file is copied into repositories with different
+    # requires-python values, and a literal `sys.version_info >= (3, 11)` is
+    # reported as an outdated version block by every one of them that requires
+    # 3.11 or later. sys.flags.safe_path is the flag `-P` sets, so its presence
+    # is the same question asked in a way that travels.
+    safe_path = ["-P"] if hasattr(sys.flags, "safe_path") else []
+    return [sys.executable, *safe_path, "-m", *command]
 
 
 def run(command: list[str], *, quiet: bool, workflows_text: str = "") -> bool | None:
@@ -208,11 +254,18 @@ def run(command: list[str], *, quiet: bool, workflows_text: str = "") -> bool | 
         check=False,  # the return code is the result, not an error
     )
     label = " ".join(command)
-    if proc.returncode == 0 or (command[0] == "pytest" and proc.returncode == PYTEST_EMPTY):
+    if proc.returncode == 0:
         print(f"  OK   {label}")
         return True
 
     output = proc.stdout + proc.stderr
+    if command[0] == "pytest" and proc.returncode == PYTEST_NO_TESTS:
+        print(f"  FAIL {label}")
+        print("       pytest collected no tests and exited 5. The runner will do")
+        print("       the same and fail the job. Usually a test file was renamed")
+        print("       or moved out of testpaths, or a filter matched nothing.")
+        return False
+
     if command[0] == "pytest" and (reason := not_our_fault(output, workflows_text)):
         print(f"  skip {label} - {reason}")
         return None
@@ -244,6 +297,33 @@ def install_hook() -> int:
     return 0
 
 
+def verdict_of(results: list[bool], skipped: list[str], workflows_text: str) -> int:
+    """Say what was checked, what was not, and whether the push is safe.
+
+    The distinction matters more than it looks. Reporting "all clear" when the
+    tests were skipped is a lie by omission, and the skipped check is almost
+    always the tests - so the runner becomes the first place they execute, which
+    is the trip this script exists to avoid.
+    """
+    if not results:
+        print("\nNOT CHECKED: none of CI's checks could run here. Nothing was verified.")
+        return 0
+    if not all(results):
+        print("\nCI would fail on this. Fix it here rather than on a runner.")
+        return 1
+    if not skipped:
+        print("\nall clear - safe to push")
+        return 0
+
+    print(f"\n{len(results)} check(s) clean, but {len(skipped)} did NOT run here:")
+    for item in skipped:
+        print(f"  - {item}")
+    if (install := ci_install_command(workflows_text)) is not None:
+        print(f"\nRun `{install}` and try again to check them locally.")
+    print("Pushing is not blocked - CI installs what is missing and will run them.")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--install-hook", action="store_true")
@@ -256,28 +336,27 @@ def main() -> int:
     workflows_text = read_workflows()
     commands = ci_commands()
     if not commands:
-        print("CI here runs no lint or test steps - nothing to check")
+        print("NOT CHECKED: CI here runs no lint or test step this script can mirror.")
+        print("             Nothing was verified. Pushing is not blocked, but nothing")
+        print("             says the code is good either.")
         return 0
 
     print("running the checks CI runs:")
     results: list[bool] = []
+    skipped: list[str] = []
     for command in commands:
         local = localise(command)
         if local is None:
             print(f"  skip {' '.join(command)} (not installed here)")
+            skipped.append(" ".join(command))
             continue
         verdict = run(local, quiet=args.quiet, workflows_text=workflows_text)
-        if verdict is not None:
+        if verdict is None:
+            skipped.append(" ".join(command))
+        else:
             results.append(verdict)
 
-    if not results:
-        print("\nnone of CI's tools are installed here - nothing checked")
-        return 0
-    if all(results):
-        print("\nall clear - safe to push")
-        return 0
-    print("\nCI would fail on this. Fix it here rather than on a runner.")
-    return 1
+    return verdict_of(results, skipped, workflows_text)
 
 
 if __name__ == "__main__":

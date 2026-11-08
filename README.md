@@ -1,67 +1,33 @@
-# Сканирование кубического мира: детекция персонажей в Minecraft с FCOS и YOLO
+# minecraft-mob-detection
 
-Данный проект посвящен исследованию возможностей современных моделей детекции объектов (FCOS и YOLOv8) на примере игрового мира Minecraft. В ходе работы произведено дообучение детекторов на специфическом игровом датасете (формат COCO, 17 классов мобов), а также сравнение их по точности (mAP), скорости инференса (FPS) и визуальному качеству предсказаний на тестовых изображениях и видеопотоке.
+Coursework that fine-tunes two object detectors, FCOS (MMDetection) and YOLOv8 (Ultralytics), on a COCO dataset of 17 Minecraft mobs, and compares them on accuracy (mAP), inference speed and the look of their predictions on test images and video.
 
-## Структура проекта
+The repository has two halves:
 
-* `datasets/minecraft/` — исходный датасет COCO и видео для инференса (не отслеживается в git).
-* `configs/` — файлы конфигурации для MMDetection (FCOS) и Ultralytics (YOLO).
-* `artifacts/` — директория с результатами:
-  * `fcos/` и `yolo/` — логи обучения и сохраненные веса (чекпоинты).
-  * `inference/` — примеры работы моделей на тестовых изображениях.
-  * `metrics/` — CSV-отчеты со сравнением метрик (mAP, FPS).
-  * `videos/` — результаты инференса на видеопотоке.
-* `notebook.ipynb` — основной Jupyter Notebook с EDA, кодом запуска обучения, инференса и визуализации.
-* `utils.py` — вспомогательные функции для подготовки и обработки данных.
-* `requirements.txt` — список необходимых Python-библиотек.
-* `report.pdf` — итоговый аналитический отчет с выводами по спринту.
+- **This project's own code.** `notebook.ipynb` walks through the data, the training of both detectors, inference and the comparison. `mobtools/` holds the helpers it calls: `dataset.py` reads the COCO export, plots the class balance, draws boxes and converts the annotations to the layout YOLO expects; `metrics.py` reads the final epoch of each trainer's log into one table; `report.py` writes the PDF report. `utils.py` re-exports them under the names the committed notebook imports.
+- **Vendored mmdetection.** `configs/`, `tools/` and `demo/` are OpenMMLab's code, kept so FCOS can be trained without a separate checkout. `configs/fcos/fcos_minecraft.py` is the configuration the notebook trains FCOS with. `THIRD_PARTY.md` says which path belongs to whom.
 
----
+`artifacts/` holds the results of the run behind `report.pdf`: training logs and curves, inference examples and `metrics/metrics_comparison.csv`. The dataset, the video and the trained weights are not in the repository.
 
-## Рабочий процесс и Запуск
+## Use
 
-Процесс выполнения проекта разделен на логические фазы. Прежде чем начать, убедитесь, что ваш базовый фундамент (сон, питание) в порядке, так как обучение моделей потребует концентрации и времени.
+```python
+from mobtools import analyze_coco_distribution, compare_metrics, generate_report, prepare_yolo_dataset
 
-### Фаза 1: Исследование (Где я? Что вокруг меня?)
-На этом этапе необходимо подготовить рабочую среду (строго под Python 3.10) и осмотреть сырые данные. **Важно соблюдать порядок установки**, так как зависимости OpenMMLab требуют уже установленного PyTorch.
-
-1. Создайте и активируйте виртуальное окружение:
-
-**Для Windows (PowerShell):**
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-
+prepare_yolo_dataset("datasets/minecraft", "datasets/minecraft_yolo")
+analyze_coco_distribution("datasets/minecraft/train/annotations.json", "artifacts/distribution.png")
+compare_metrics("artifacts/yolo/results.csv", "artifacts/fcos/20260311_015948/vis_data/scalars.json", "artifacts/metrics/metrics_comparison.csv")
+generate_report("artifacts/distribution.png", "artifacts/metrics/metrics_comparison.csv")
 ```
 
-*(Для Linux/macOS: `source .venv/bin/activate`)*
-
-2. установите PyTorch. Команда зависит от версии CUDA на вашей ВМ (пример для CUDA 11.8):
-
-```powershell
-pip install torch torchvision torchaudio --index-url [https://download.pytorch.org/whl/cu118](https://download.pytorch.org/whl/cu118)
-
-```
-
-3. Убедившись, что PyTorch установлен без ошибок, установите базовые зависимости и пакеты MMDetection с YOLO:
-
-```powershell
-pip install -U openmim
-mim install mmengine
-mim install "mmcv>=2.0.0"
-pip install mmdet ultralytics jupyterlab pycocotools opencv-python pandas matplotlib
-
-```
-
-4. Разместите скачанный датасет в `datasets/minecraft/` (внутри должны быть папки `train`, `val`, `test` и файл `annotations.json`). Разместите видео для инференса по пути `datasets/minecraft/video.mp4`.
+`docs/install.md` says what to install, for the helpers and for the notebook, and `docs/manual.md` describes each helper. `.\recipe.ps1 test` runs the tests, mypy and ruff over `mobtools/`, `utils.py` and `tests/`. The tests write their own small COCO files, images and logs, so they need neither the dataset nor any weights, and they check that importing `mobtools` loads no part of the training stack.
 
 ## Licence
 
-The code written for this project - `mobtools/`, `tests/`, `scripts/`,
-`utils.py` and the notebook - is MIT, see `LICENSE`.
+The code written for this project - `mobtools/`, `tests/`, `utils.py` and the notebook - is MIT, see `LICENSE`.
 
-`tools/`, `demo/` and `configs/` are vendored from
-[mmdetection](https://github.com/open-mmlab/mmdetection) and remain under the
-Apache License 2.0; the copy required by that licence is in
-`LICENSES/Apache-2.0-OpenMMLab.txt`. `THIRD_PARTY.md` says which path belongs to
-whom.
+`tools/`, `demo/` and `configs/` are vendored from [mmdetection](https://github.com/open-mmlab/mmdetection) and remain under the Apache License 2.0; the copy required by that licence is in `LICENSES/Apache-2.0-OpenMMLab.txt`.
+
+## Lab requirements
+
+This repository complies with [revision 4.0.0](http://127.0.0.1:3000/igors-lab/software-requirements/src/tag/v4.0.0/BEST_REQUIREMENTS.md) of the lab requirements, except R-02 (#8), R-09 (#9), R-12 (#10), R-37 (#11), R-41 (#12), R-42 (#13).

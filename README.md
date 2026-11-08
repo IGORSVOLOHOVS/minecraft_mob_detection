@@ -27,3 +27,7 @@ generate_report("artifacts/distribution.png", "artifacts/metrics/metrics_compari
 The code written for this project - `mobtools/`, `tests/`, `utils.py` and the notebook - is MIT, see `LICENSE`.
 
 `tools/`, `demo/` and `configs/` are vendored from [mmdetection](https://github.com/open-mmlab/mmdetection) and remain under the Apache License 2.0; the copy required by that licence is in `LICENSES/Apache-2.0-OpenMMLab.txt`.
+
+## Lab requirements
+
+This repository complies with [revision 4.0.0](http://127.0.0.1:3000/igors-lab/software-requirements/src/tag/v4.0.0/BEST_REQUIREMENTS.md) of the lab requirements, except R-02 (#8), R-09 (#9), R-12 (#10), R-37 (#11), R-41 (#12), R-42 (#13).

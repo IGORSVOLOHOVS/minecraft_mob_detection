@@ -64,6 +64,8 @@ line-length = 100
 # The project's own files only, as before the lab: the vendored mmdetection tree
 # and the notebook stay out of both the linter and the formatter.
 include = ["mobtools/**/*.py", "tests/**/*.py", "utils.py"]
+# Section 7 prints this one verbatim, so it is not this project's to lint either.
+extend-exclude = ["tests/manual/serve.py"]
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "N", "UP", "B", "C4", "SIM", "RUF", "ANN"]

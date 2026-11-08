@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import datetime
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 from fpdf import FPDF, XPos, YPos
@@ -36,7 +37,7 @@ class PDFReport(FPDF):
     warning.
     """
 
-    def __init__(self, *args: object, **kwargs: object) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
         regular = FONT_DIR / "DejaVuSans.ttf"

@@ -3,6 +3,28 @@
 Восстановлена по коду ветки `dev`, коммит `f5d087f`, 2026-11-18. Описывает реализованное
 поведение; заявленное без кода вынесено в 3.6, неизвестное — в раздел 9.
 
+<!-- jira-sync:start -->
+Jira: KAN-80
+
+## Tasks
+
+This list is one ticket in Jira project KAN, [KAN-80](https://igorsvolohovs.atlassian.net/browse/KAN-80). Each line is a checkbox there: tick it in Jira and the sync ticks it here; add a checkbox there and it is appended here. Done items are the features described in section 3; open items are what the project declares but the code does not do yet.
+
+- [x] Анализ датасета (`mobtools/dataset.py`) (section 3.1) <!-- spec-mobtools-dataset-py -->
+- [x] Преобразование COCO → YOLO (`mobtools/dataset.py`) (section 3.2) <!-- spec-coco-yolo-mobtools-dataset-py -->
+- [x] Сравнение метрик (`mobtools/metrics.py`) (section 3.3) <!-- spec-mobtools-metrics-py -->
+- [x] PDF-отчёт (`mobtools/report.py`) (section 3.4) <!-- spec-pdf-mobtools-report-py -->
+- [x] Сценарий, конфиг FCOS и сопровождение (section 3.5) <!-- spec-fcos-9fae9f96dd -->
+- [ ] Сравнение по скорости инференса (FPS) (declared, not implemented) <!-- spec-fps-818477d718 -->
+- [ ] Результаты инференса на видеопотоке в `artifacts/videos/` (declared, not implemented) <!-- spec-artifacts-videos-1e4797d9f3 -->
+- [ ] `requirements.txt` (declared, not implemented) <!-- spec-requirements-txt -->
+- [ ] Сохранённые веса в `artifacts/fcos/`, `artifacts/yolo/` (declared, not implemented) <!-- spec-artifacts-fcos-artifacts-yolo -->
+- [ ] Конфигурация Ultralytics в `configs/` (declared, not implemented) <!-- spec-ultralytics-configs -->
+- [ ] Последующие фазы работы (declared, not implemented) <!-- spec-4fd8de359d -->
+- [ ] Страницы «Пример визуализации» в `report.pdf` (declared, not implemented) <!-- spec-report-pdf-135bb9371e -->
+
+<!-- jira-sync:end -->
+
 ## 1. Назначение и границы
 
 Учебный проект («coursework», `mobtools/__init__.py:1`) по сравнению двух детекторов, YOLOv8s
